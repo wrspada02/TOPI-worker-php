@@ -1,29 +1,39 @@
 <?php
 
-// Requires the phpredis extension:
-// https://github.com/phpredis/phpredis
+require __DIR__ . '/vendor/autoload.php';
+
+use Predis\Client;
+
+$queueName = 'items';
 $timeoutSeconds = 10;
 
-$redis = new Redis();
-
 try {
-    $redis->connect('127.0.0.1', 6379);
+    // Create Predis client
+    $redis = new Client([
+        'scheme' => 'tcp',
+        'host'   => '127.0.0.1',
+        'port'   => 6379,
+    ]);
 
-    echo "Connected to Redis\n";
-    echo "Waiting for items on queue 'items'...\n";
+    // Test connection
+    $redis->connect();
+
+    echo "Connected to Redis using Predis\n";
+    echo "Waiting for items on queue '{$queueName}'...\n";
 
     while (true) {
+
         // BRPOP blocks until:
         // - an item is available
-        // - or timeout is reached
+        // - or timeout occurs
         //
         // Returns:
         // [queue_name, item]
-        // or null/false on timeout
+        // or null on timeout
 
-        $result = $redis->brPop(['items'], $timeoutSeconds);
+        $result = $redis->brpop([$queueName], $timeoutSeconds);
 
-        if ($result === null || $result === false) {
+        if ($result === null) {
             echo "[" . date('Y-m-d H:i:s') . "] Timeout after {$timeoutSeconds}s, no items found.\n";
             continue;
         }
@@ -36,7 +46,7 @@ try {
         // ...
     }
 
-} catch (RedisException $e) {
+} catch (\Exception $e) {
     echo "Redis error: " . $e->getMessage() . PHP_EOL;
     exit(1);
 }
