@@ -1,0 +1,17 @@
+{
+    "name": "codespace/topi-worker-php",
+    "require": {
+        "predis/predis": "^3.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Codespace\\TopiWorkerPhp\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "William Spada",
+            "email": "90157791+wrspada02@users.noreply.github.com"
+        }
+    ]
+}
