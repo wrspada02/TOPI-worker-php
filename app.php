@@ -6,12 +6,13 @@ use Predis\Client;
 
 $queueName = 'items';
 $timeoutSeconds = 10;
+$host = getenv('REDIS_HOST') ?: 'localhost';
+$port = (int) (getenv('REDIS_PORT') ?: 6379);
 
 try {
     $redis = new Client([
-        'scheme' => 'tcp',
-        'host'   => '127.0.0.1',
-        'port'   => 6379,
+        'host'   => $host,
+        'port'   => $port,
     ]);
 
     $redis->connect();
