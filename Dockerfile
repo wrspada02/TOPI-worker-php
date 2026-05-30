@@ -20,7 +20,7 @@ RUN composer install --no-dev --optimize-autoloader
 
 # Copy application code
 COPY app.php ./
-COPY src/ ./src/
+# COPY src/ ./src/ # Removed because src directory does not exist
 
 # Create non-root user
 RUN useradd -m -u 1000 worker && chown -R worker:worker /app
