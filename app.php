@@ -6,34 +6,57 @@ use Predis\Client;
 
 $queueName = 'items';
 $timeoutSeconds = 10;
-$host = getenv('REDIS_HOST') ?: 'localhost';
+
+$host = getenv('REDIS_HOST') ?: 'redis';
 $port = (int) (getenv('REDIS_PORT') ?: 6379);
 
-try {
-    $redis = new Client([
-        'host'   => $host,
-        'port'   => $port,
-    ]);
+$workerId = gethostname();
 
-    $redis->connect();
+function logMsg($workerId, $msg) {
+    echo "[" . date('Y-m-d H:i:s') . "][WORKER {$workerId}] {$msg}\n";
+}
 
-    echo "Connected to Redis using Predis\n";
-    echo "Waiting for items on queue '{$queueName}'...\n";
-
+function connectRedis($host, $port, $workerId) {
     while (true) {
+        try {
+            $redis = new Client([
+                'scheme' => 'tcp',
+                'host'   => $host,
+                'port'   => $port,
+            ]);
+
+            $redis->connect();
+
+            logMsg($workerId, "Connected to Redis at {$host}:{$port}");
+            return $redis;
+
+        } catch (Exception $e) {
+            logMsg($workerId, "Redis connection failed: {$e->getMessage()} - retrying in 2s");
+            sleep(2);
+        }
+    }
+}
+
+$redis = connectRedis($host, $port, $workerId);
+
+logMsg($workerId, "Waiting for items on queue '{$queueName}'...");
+
+while (true) {
+    try {
         $result = $redis->brpop([$queueName], $timeoutSeconds);
 
         if ($result === null) {
-            echo "[" . date('Y-m-d H:i:s') . "] Timeout after {$timeoutSeconds}s, no items found.\n";
+            // silent or low-noise log
             continue;
         }
 
         [$queue, $item] = $result;
 
-        echo "[" . date('Y-m-d H:i:s') . "] Popped item from '{$queue}': {$item}\n";
-    }
+        logMsg($workerId, "Processed item={$item} from queue={$queue}");
 
-} catch (\Exception $e) {
-    echo "Redis error: " . $e->getMessage() . PHP_EOL;
-    exit(1);
+    } catch (Exception $e) {
+        logMsg($workerId, "Redis error: {$e->getMessage()} - reconnecting");
+
+        $redis = connectRedis($host, $port, $workerId);
+    }
 }
